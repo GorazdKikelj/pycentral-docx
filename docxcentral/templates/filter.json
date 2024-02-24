@@ -1,0 +1,19 @@
+{
+    "site_list": [
+        "site_name"
+    ],
+    "group_list": [
+        "group_name"
+    ],
+    "ap_filter": {
+        "group": "group name",
+        "label": "label",
+        "site": "site_name",
+        "sort": "+serial",
+        "status": "AP status",
+        "serial": "AP serial no",
+        "macaddr": "AP mac address",
+        "model": "AP model",
+        "cluster_id": "Mobility controller Serial no"
+    }
+}

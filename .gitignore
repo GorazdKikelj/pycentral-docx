@@ -1,0 +1,12 @@
+/pycentral-docx.code-workspace
+test*.py
+/docxcentral/docx/*
+/log
+/token
+/*.json
+/docxcentral/__pycache__
+/docxcentral/lib/__pycache__/*.pyc
+/docxcentral/data
+/docxcentral/log
+/docxcentral/token
+/docxcentral/*.json
