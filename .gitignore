@@ -10,3 +10,11 @@ test*.py
 /docxcentral/log
 /docxcentral/token
 /docxcentral/*.json
+/images
+/Sites
+/docx
+/bom
+/docxcentral/docx
+/docxcentral/bom
+/docxcentral/Floors
+/docxcentral/images
