@@ -1,6 +1,6 @@
-### Documenting Aruba Central Device configuration
+# Documenting Aruba Central Device configuration
 
-# Requirements
+## Requirements
 ```
 docx2pdf
 docxcompose
