@@ -5,6 +5,7 @@
     gorazd.kikelj@gmail.com
     
 """
+from encodings import utf_8
 import os
 import json
 import sys
@@ -71,7 +72,7 @@ def read_jsonfile(filename: str, object_hook=False) -> dict:
     jsondict = {}
     jsonfile = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), filename)
     if os.path.isfile(jsonfile):
-        with open(jsonfile, "r") as infile:
+        with open(jsonfile, "r", encoding="utf_8") as infile:
             try:
                 if object_hook:
                     jsondict = json.load(infile, object_hook=date_hook)

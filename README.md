@@ -25,7 +25,7 @@ sortedcontainers
 
 ### bom/ 
 Directory contains BOM (Bill of Material) word document for Aruba Central site.
-BOM file is generated in Visual RF on Aruba Central site.
+BOM file is generated with Visual RF on Aruba Central site.
 
 ### docx/
 Directory contains generated MS Word and PDF files.

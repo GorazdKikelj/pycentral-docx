@@ -19,20 +19,18 @@ from docxcentral import (
     C_CSV_DELIMITER,
     C_CSV_SN_COLUMN,
     C_JSON_CENTRAL,
-    C_JSON_COMMANDS,
     C_JSON_FILTER,
     C_REQUIRED_KEYS,
 )
 
 from . import (
     get_ap_list_from_csv,
-    get_debug_commands_from_json,
     get_filter_from_json,
     get_central_from_json,
     check_path,
 )
 
-from docxcentral.logwriter import log_writer
+from docxcentral.logwriter import log_writer, check_debug_level
 
 
 def define_arguments():
@@ -47,6 +45,7 @@ def define_arguments():
         description="........ \
              Log collection App for Aruba Central REST API ....."
     )
+    """
     parser.add_argument(
         "--csv_input",
         required=False,
@@ -66,7 +65,7 @@ def define_arguments():
         help="Column delimiter (optional, default=',')",
         default=C_CSV_DELIMITER,
     )
-
+    """
     parser.add_argument(
         "--json_central",
         required=False,
@@ -79,15 +78,19 @@ def define_arguments():
         help="JSON file with group select filter (optional, default=filter.json)",
         default=C_JSON_FILTER,
     )
-    """
+
     parser.add_argument(
-        "--json_commands",
+        "--customer_name",
         required=False,
-        help="JSON file with list of commands to execute for each device \
-                        (optional, default=commands.json)",
-        default=C_JSON_COMMANDS,
-    )   
-    """
+        help="Custmer name for the document title page (optional, default=None)",
+        default=None,
+    )
+    parser.add_argument(
+        "--document_title",
+        required=False,
+        help="Document title (optional, default=None)",
+        default=None,
+    )
     parser.add_argument(
         "--event_list",
         required=False,
@@ -130,41 +133,23 @@ def process_arguments(args):
     # Extract customer info from input JSON File
 
     debug_level = args.debug_level
-    try:
-        set_level = getLevelName(debug_level)
-    except KeyError:
-        set_level = getLevelName[C_DEBUG_LEVEL]
-        log_writer.info(
-            f"Wrong debug level {debug_level}. Using {C_DEBUG_LEVEL} instead."
-        )
+    if debug_level:
+        check_debug_level(debug_level)
 
-    log_writer.setLevel(set_level)
-
-    if args.csv_input:
-        csv_file = args.csv_input
-        csv_sn_column = args.csv_sn_column
-        csv_delimiter = args.csv_delimiter
-        if csv_delimiter in ["\\t", "tab", "Tab"]:
-            csv_delimiter = "\t"
-        param_dict["device_list"] = get_ap_list_from_csv(
-            filename=csv_file, row_index=csv_sn_column, delimiter=csv_delimiter
-        )
-        log_writer.info(
-            f"__Using device list from CSV file {csv_file}. Serial number column is {csv_sn_column}"
-        )
-    else:
-        filter_file = args.json_filter
-        param_dict = param_dict | get_filter_from_json(filename=filter_file)
-        log_writer.info(
-            f'__Using group  list from Aruba Central {param_dict["group_list"]}'
-        )
+    filter_file: str = args.json_filter
+    param_dict: dict = param_dict | get_filter_from_json(filename=filter_file)
+    log_writer.info(f'__Using group list from Aruba Central {param_dict["group_list"]}')
 
     central_file = args.json_central
     param_dict["central_info"] = get_central_from_json(filename=central_file)
 
-    # commands_file = args.json_commands
-    # param_dict["debug_command"] = get_debug_commands_from_json(filename=commands_file)
-    # log_writer.info(f'__Debug commands: {param_dict.get("debug_command")}')
+    if args.customer_name:
+        param_dict["customer"]["customer_name"] = args.customer_name
+    if args.document_title:
+        param_dict["customer"]["document_title"] = args.document_title
+
+    log_writer.info(f'__Customer name: {param_dict["customer"]["customer_name"]}')
+    log_writer.info(f'__Document Title: {param_dict["customer"]["document_title"]}')
 
     param_dict["event_file"] = {
         "filename": args.event_list,
@@ -175,6 +160,7 @@ def process_arguments(args):
 
     param_dict["condition"] = {"inverse_search": args.inverse_search}
     log_writer.info(f"__Search conditions: {param_dict.get('condition')}")
+
     return param_dict
 
 

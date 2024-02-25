@@ -6,7 +6,7 @@
     
 """
 
-__all__ = ["collect_data"]
+__all__ = ["run_docx"]
 __author__ = "Gorazd Kikelj"
 __version__ = "0.1.0"
 __license__ = "MIT"

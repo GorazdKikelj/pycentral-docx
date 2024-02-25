@@ -17,3 +17,7 @@ C_DEBUG_LEVEL = (
 # Default directories
 #
 C_LOG_DIR = "log/"  #''' Log directory '''
+#
+# Default logger config file
+#
+C_LOG_CONFIG = "logconfig.json"

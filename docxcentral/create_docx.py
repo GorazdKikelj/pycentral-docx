@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+    Author: Gorazd Kikelj
+    
+    gorazd.kikelj@gmail.com
+    
+"""
 from docx import Document
 from docx.shared import Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -19,12 +26,15 @@ import glob
 from icecream import ic
 from docxcentral.lib.arguments import init_arguments
 from docxcentral.lib.central import connect_to_central
+from docxcentral.logwriter import log_writer
 
 TEMPLATE_DOCX = "template/template.docx"
 DIR_DOCX = "docx/"
 DIR_BOM = "bom/"
 
 visualrf_api = "/visualrf_api/v1/"
+
+global params
 
 
 def get_central_data(central, apipath, apiparams={"offset": 0}):
@@ -246,7 +256,7 @@ def print_all_ap_details(central, group) -> None:
 
     data = get_central_data(central=central, apipath=apipath, apiparams=apiparams)
     if not data.get("aps"):
-        print("Print_All_AP_Details Failed. No APs returned from Central")
+        log_writer.error("Print_All_AP_Details Failed. No APs returned from Central")
         return None
 
     for ap in data.get("aps"):
@@ -256,7 +266,7 @@ def print_all_ap_details(central, group) -> None:
 
 
 def add_ap_to_page(central, document, item) -> None:
-    print(f"Add AP {item['name']} {item['serial']}")
+    log_writer.info(f"Add AP {item['name']} {item['serial']}")
     ap_data = get_per_ap_settings(central=central, serial_no=item["serial"])
     document.add_paragraph(
         f'AP: {item["name"]}', style="Aruba body Quote text 2 Orange Arial 16pt"
@@ -367,7 +377,7 @@ def add_ap_to_page(central, document, item) -> None:
 def add_document_header(document, item) -> None:
     document.add_paragraph(item, style="Aruba Cover: Main title Orange Arial Bold 36pt")
     document.add_paragraph(
-        f"\n\nMestna občina Celje\n\nKonfiguracija {date.today()}\n\n\n\n",
+        f"\n\n{params['customer']['customer_name']}\n\n{params['customer']['document_title']} {date.today()}\n\n\n\n",
         style="Aruba Cover: Subheading CAPS Dark Blue Arial 20pt",
     )
 
@@ -407,13 +417,15 @@ def add_site_document(central, item, ap_list, data) -> None:
 
     doc_filename = f"{item['site_name']}.docx"
 
+    document.save(f"{DIR_DOCX}{doc_filename}")
+
     add_bom_list(
         document=document,
         doc_filename=f"{DIR_DOCX}{doc_filename}",
         site_name=item["site_name"],
     )
 
-    #    document.save(doc_filename)
+    #    document.save(f"{DIR_DOCX}{doc_filename}")
 
     convert_docx_to_pdf(doc_filename=f"{DIR_DOCX}{doc_filename}")
 
@@ -461,7 +473,7 @@ def add_wlan_group_to_page(central, group_name) -> None:
     document = Document(TEMPLATE_DOCX)
     data = get_wlan_list(central=central, group_name=group_name)
     if type(data) is not dict:
-        print(f"No data returned for WLANs on group {group_name}")
+        log_writer.error(f"No data returned for WLANs on group {group_name}")
         return None
 
     add_document_header(document=document, item=f"Configuration group\n{group_name}")
@@ -495,12 +507,12 @@ def add_bom_list(document, doc_filename, site_name) -> None:
     bom_files = glob.glob(f"{DIR_BOM}{site_name}*.docx")
 
     for filename in bom_files:
-        print(f"BOM FILENAME : {doc_filename}....{filename}")
+        log_writer.info(f"BOM FILENAME : {doc_filename} {filename}")
         if exists(filename):
             sub_doc = Document(filename)
             comp.append(sub_doc)
         else:
-            print(f"ERROR: BOM file does not exist. {filename}")
+            log_writer.error(f"ERROR: BOM file does not exist. {filename}")
 
     comp.save(doc_filename)
 
@@ -510,7 +522,7 @@ def add_bom_list(document, doc_filename, site_name) -> None:
 def convert_docx_to_pdf(doc_filename) -> None:
     if not exists(doc_filename):
         return None
-    print(f"Convert docx to pdf {doc_filename}")
+    log_writer.info(f"Convert docx to pdf {doc_filename}")
     convert(doc_filename)
 
     return None
@@ -715,7 +727,7 @@ def add_sites_to_page(central, site_name, sites) -> dict:
     for name, idx in sort_list(data=sites, key="site_name"):
         item = sites[idx]
         if item["site_name"] in ap_list.keys():
-            print(f'Processed site: {item["site_name"]}')
+            log_writer.info(f'Processed site: {item["site_name"]}')
             add_site_document(central=central, item=item, ap_list=ap_list, data=data)
 
     return ap_list_by_sn
@@ -738,8 +750,8 @@ Podatki o posamezni lokaciji (site)
 
 
 def run_docx():
-
-    params: dict = init_arguments()
+    global params
+    params = init_arguments()
     central = connect_to_central(central_info=params.get("central_info"))
 
     site_list: list = params.get("site_list")
@@ -753,24 +765,24 @@ def run_docx():
     if not all_groups:
         all_groups = get_central_groups(central=central)
 
-    print(f"Write documentation for following group(s): {all_groups}")
+    log_writer.info(f"Write documentation for following group(s): {all_groups}")
     add_subscription_keys(central=central)
 
     ap_list = {}
 
     for group in all_groups:
-        print(
+        log_writer.info(
             f"Working on group {group} ------------------------------------------------"
         )
         add_rf_group_to_page(central=central, group_name=group)
         add_wlan_group_to_page(central=central, group_name=group)
 
-    print(f"Write documentation for following site(s): {sites}")
+    log_writer.info(f"Write documentation for following site(s): {sites}")
     for site in sites:
         ap_list = ap_list | add_sites_to_page(
             central=central, site_name=site["site_name"], sites=sites
         )
-        print(
+        log_writer.info(
             f"Adding APs to list site {site['site_name']} ap list size {len(ap_list)}"
         )
 
