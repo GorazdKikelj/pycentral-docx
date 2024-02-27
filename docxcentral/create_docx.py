@@ -425,8 +425,6 @@ def add_site_document(central, item, ap_list, data) -> None:
         site_name=item["site_name"],
     )
 
-    #    document.save(f"{DIR_DOCX}{doc_filename}")
-
     convert_docx_to_pdf(doc_filename=f"{DIR_DOCX}{doc_filename}")
 
     return None
