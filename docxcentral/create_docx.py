@@ -24,129 +24,39 @@ from pycentral.licensing import Subscriptions
 from pycentral.device_inventory import Inventory
 import glob
 from icecream import ic
+from docxcentral.config import C_TEMPLATE_DOCX, C_DOCX_DIR, C_BOM_DIR
 from docxcentral.lib.arguments import init_arguments
-from docxcentral.lib.central import connect_to_central
+from docxcentral.lib.central import (
+    connect_to_central,
+    get_central_data,
+    post_central_data,
+    get_per_ap_settings,
+    get_per_ap_config,
+    get_campus_id,
+    get_buildings,
+    get_floors,
+    get_floor_data,
+    get_floor_image,
+    save_floorplans,
+    get_rf_groups,
+    get_central_groups,
+    get_wlan_list,
+    get_sites,
+)
 from docxcentral.logwriter import log_writer
 
-TEMPLATE_DOCX = "template/template.docx"
-DIR_DOCX = "docx/"
-DIR_BOM = "bom/"
-
-visualrf_api = "/visualrf_api/v1/"
+"""
+C_TEMPLATE_DOCX = "template/template.docx"
+C_DOCX_DIR = "docx/"
+C_BOM_DIR = "bom/"
+"""
 
 global params
-
-
-def get_central_data(central, apipath, apiparams={"offset": 0}):
-    apiPath = apipath
-    apiMethod = "GET"
-    apiParams = apiparams or " "
-    base_resp = central.command(
-        apiMethod=apiMethod, apiPath=apiPath, apiParams=apiParams
-    )
-    return base_resp["msg"]
-
-
-def get_campus_id(central) -> dict:
-    return get_central_data(
-        central=central, apipath=visualrf_api + "campus", apiparams={"offset": 0}
-    )
-
-
-def get_buildings(central, campus_id) -> dict:
-    return get_central_data(
-        central=central,
-        apipath=visualrf_api + f"campus/{campus_id}",
-        apiparams={"offset": 0},
-    )
-
-
-def get_floors(central, building_id) -> dict:
-    return get_central_data(
-        central=central,
-        apipath=visualrf_api + f"building/{building_id}",
-        apiparams={"offset": 0, "units": "METERS"},
-    )
-
-
-def get_floor_data(central, floor_id) -> dict:
-    return get_central_data(
-        central=central,
-        apipath=visualrf_api + f"floor/{floor_id}/access_point_location",
-        apiparams={"offset": 0, "units": "METERS"},
-    )
-
-
-def save_floorplans(central) -> dict:
-    campuses = get_campus_id(central=central)
-    floor_dict = {}
-    buildings = get_buildings(
-        central=central, campus_id=campuses["campus"][0]["campus_id"]
-    )
-    for building in buildings["buildings"]:
-        floors = get_floors(central=central, building_id=building["building_id"])
-        for floor in floors["floors"]:
-            floor_dict[floor["floor_name"]] = {
-                "floor_id": floor["floor_id"],
-                "ap": {},
-            }
-            img = base64.b64decode(
-                get_central_data(
-                    central=central,
-                    apipath=f"/visualrf_api/v1/floor/{floor['floor_id']}/image",
-                    apiparams={"offset": 0},
-                ),
-                validate=True,
-            )
-            with open(
-                f"images/{building['building_name']}_floor_{floor['floor_level']}.png",
-                "wb",
-            ) as f:
-                f.write(img)
-
-            floor_data = get_floor_data(central=central, floor_id=floor["floor_id"])
-            for ap in floor_data["access_points"]:
-                floor_dict[floor["floor_name"]]["ap"].update(
-                    {ap["ap_name"]: ap["ap_id"]}
-                )
-    return floor_dict
-
-
-def get_rf_groups(central, group_name) -> list:
-    apipath = f"/configuration/v1/dot11a_radio_profiles/{group_name}"
-    return get_central_data(central=central, apipath=apipath)
-
-
-def get_central_groups(central) -> list:
-    g = Groups()
-    group_list = g.get_groups(central)["msg"]
-
-    return group_list.get("data")
-
-
-def get_wlan_list(central, group_name) -> dict:
-    apipath = f"/configuration/full_wlan/{group_name}"
-    data = get_central_data(central=central, apipath=apipath)
-    if type(data) is dict:
-        return data.get("description")
-    return json.loads(data)
-
-
-def get_sites(central) -> list:
-    s = Sites()
-    site_list = s.get_sites(central)["msg"]
-    return site_list.get("sites")
 
 
 def set_column_width(column, width) -> None:
     for cell in column.cells:
         cell.width = Cm(width)
-
-
-def get_per_ap_settings(central, serial_no) -> list:
-    #    apimethod = "GET"
-    apipath = f"/configuration/v1/ap_settings_cli/{serial_no}"
-    return get_central_data(central=central, apipath=apipath)
 
 
 def sort_ap_list(file_mask, reverse=False) -> list:
@@ -385,7 +295,7 @@ def add_document_header(document, item) -> None:
 
 
 def add_site_document(central, item, ap_list, data) -> None:
-    document = Document(TEMPLATE_DOCX)
+    document = Document(C_TEMPLATE_DOCX)
     add_document_header(document=document, item=item["site_name"])
     document.add_paragraph(
         f'Site: {item["site_name"]}',
@@ -417,15 +327,15 @@ def add_site_document(central, item, ap_list, data) -> None:
 
     doc_filename = f"{item['site_name']}.docx"
 
-    document.save(f"{DIR_DOCX}{doc_filename}")
+    document.save(f"{C_DOCX_DIR}{doc_filename}")
 
     add_bom_list(
         document=document,
-        doc_filename=f"{DIR_DOCX}{doc_filename}",
+        doc_filename=f"{C_DOCX_DIR}{doc_filename}",
         site_name=item["site_name"],
     )
 
-    convert_docx_to_pdf(doc_filename=f"{DIR_DOCX}{doc_filename}")
+    convert_docx_to_pdf(doc_filename=f"{C_DOCX_DIR}{doc_filename}")
 
     return None
 
@@ -435,7 +345,7 @@ def add_rf_group_to_page(central, group_name) -> None:
     Create document with all RF group data for AP Group
 
     """
-    document = Document(TEMPLATE_DOCX)
+    document = Document(C_TEMPLATE_DOCX)
     data = get_rf_groups(central=central, group_name=group_name)
     add_document_header(document=document, item=f"Configuration group\n{group_name}")
     document.add_page_break()
@@ -456,7 +366,7 @@ def add_rf_group_to_page(central, group_name) -> None:
 
         document.add_page_break()
 
-    doc_filename = f"{DIR_DOCX}{group_name}_rf_groups.docx"
+    doc_filename = f"{C_DOCX_DIR}{group_name}_rf_groups.docx"
     document.save(doc_filename)
     convert_docx_to_pdf(doc_filename=doc_filename)
     return None
@@ -468,7 +378,7 @@ def add_wlan_group_to_page(central, group_name) -> None:
 
     """
 
-    document = Document(TEMPLATE_DOCX)
+    document = Document(C_TEMPLATE_DOCX)
     data = get_wlan_list(central=central, group_name=group_name)
     if type(data) is not dict:
         log_writer.error(f"No data returned for WLANs on group {group_name}")
@@ -491,7 +401,7 @@ def add_wlan_group_to_page(central, group_name) -> None:
             value = tmp_value if not isinstance(tmp_value, dict) else tmp_value["value"]
             row_cells = add_ap_row(table=table, label=group, value=value)
         document.add_page_break()
-    doc_filename = f"{DIR_DOCX}{group_name}_wlan_groups.docx"
+    doc_filename = f"{C_DOCX_DIR}{group_name}_wlan_groups.docx"
     document.save(doc_filename)
     convert_docx_to_pdf(doc_filename=doc_filename)
 
@@ -502,7 +412,7 @@ def add_bom_list(document, doc_filename, site_name) -> None:
     """Add additional document to the master document file"""
     comp = Composer(document)
 
-    bom_files = glob.glob(f"{DIR_BOM}{site_name}*.docx")
+    bom_files = glob.glob(f"{C_BOM_DIR}{site_name}*.docx")
 
     for filename in bom_files:
         log_writer.info(f"BOM FILENAME : {doc_filename} {filename}")
@@ -537,7 +447,7 @@ def add_subscription_keys(central) -> None:
         return None
 
     data = data_msg.get("subscriptions")
-    document = Document(TEMPLATE_DOCX)
+    document = Document(C_TEMPLATE_DOCX)
     add_document_header(document=document, item=f"Subscriptions")
     document.add_page_break()
 
@@ -591,7 +501,7 @@ def add_subscription_keys(central) -> None:
         )
         row_cells[7].paragraphs[0].style = "Table Body 8pt"
 
-    doc_filename = f"{DIR_DOCX}subscriptions.docx"
+    doc_filename = f"{C_DOCX_DIR}subscriptions.docx"
     document.save(doc_filename)
     convert_docx_to_pdf(doc_filename=doc_filename)
     return None
@@ -614,7 +524,7 @@ def add_device_inventory(central, ap_list: dict) -> None:
         ap_list[sn]["subscription_key"] = ap.get("subscription_key")
         ap_list[sn]["tier_type"] = ap.get("tier_type")
 
-    document = Document(TEMPLATE_DOCX)
+    document = Document(C_TEMPLATE_DOCX)
     add_document_header(document=document, item=f"Device Inventory")
     document.add_page_break()
 
@@ -683,7 +593,7 @@ def add_device_inventory(central, ap_list: dict) -> None:
         row_cells[6].text = f'{subscription.get("tier_type")}'
         row_cells[6].paragraphs[0].style = "Table Body 8pt"
 
-    doc_filename = f"{DIR_DOCX}device_inventory.docx"
+    doc_filename = f"{C_DOCX_DIR}device_inventory.docx"
     document.save(doc_filename)
     convert_docx_to_pdf(doc_filename=doc_filename)
     return None
@@ -751,6 +661,8 @@ def run_docx():
     global params
     params = init_arguments()
     central = connect_to_central(central_info=params.get("central_info"))
+
+    #   save_floorplans(central=central, central_info=params.get("central_info"))
 
     site_list: list = params.get("site_list")
     all_sites = get_sites(central=central)

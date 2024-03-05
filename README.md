@@ -33,9 +33,18 @@ Directory contains generated MS Word and PDF files.
 ### images/
 Directory contains pictures of installed equipment. Each site has it's own directory.
 
-Image filenames for a device start with serial number. Supported type is jpg. 
+Image filenames for a device start with serial number and follow by "-" AP name. Supported type is jpg.
+
+<serial number>-<ap name>.jpg
+
+Example: CNNNXXXXYY-APnn.jpg
 
 Image for Location section of the report ends with "_location.png".
+Location image can be downloaded from Aruba Central / <AP> / Floor Plan.
+
+<serial number>-<ap name>_location.png
+
+Example: CNNNXXXXXYY-APnn_location.png
 
 ### template/
 Directory contains template MS Word documents used to generate final documentation.

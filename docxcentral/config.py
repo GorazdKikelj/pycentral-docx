@@ -18,6 +18,12 @@ C_DEBUG_LEVEL = (
 #
 C_LOG_DIR = "log/"  #''' Log directory '''
 C_DATA_DIR = "data/"  #''' Data directory '''
+C_DOCX_DIR = "docx/"
+C_BOM_DIR = "bom/"
+#
+# Default MS Word Template
+#
+C_TEMPLATE_DOCX = "template/template.docx"
 #
 # Default CSV parameters
 #
