@@ -7,7 +7,7 @@
 """
 from time import sleep
 from pycentral.base import ArubaCentralBase
-from pycentral.configuration import Groups
+from pycentral.configuration import Groups, Devices
 from pycentral.monitoring import Sites
 from icecream import ic
 from docxcentral.logwriter import log_writer
@@ -147,6 +147,7 @@ def connect_to_central(central_info: dict) -> None:
         central_info=central_info,
         token_store=token_store,
         ssl_verify=True,
+        logger=log_writer,
     )
     return central
 
@@ -159,22 +160,19 @@ def get_per_ap_settings(central, serial_no) -> dict:
     return get_central_data(central=central, apipath=apipath)
 
 
-#    ap_data = get_central_data(central=central, apipath=apipath)
-#
-#    if isinstance(ap_data, dict):
-#        return ap_data.get("aps")
-#    return None
-
-
 def get_per_ap_config(central, serial_no) -> dict:
     """
     Return current AP configuration
+    """
+    cfg = get_device_configuration(central, serial_no)
+    return cfg.get("msg")
     """
     return get_central_data(
         central=central,
         apipath=f"/configuration/v1/devices/{serial_no}/configuration",
         apiparams={"limit": 0},
     )
+    """
 
 
 """
@@ -228,6 +226,9 @@ def get_floor_image(central, floor_id) -> any:
 
 
 def save_floorplan_ap_location(central, ap_id):
+    """
+    Need to use cookie to authorize. Currently not in working condition
+    """
     api_path = f"/visualrf/location.png?id={ap_id}"
     base_resp = central.command(
         apiMethod="GET", apiPath=api_path, apiParams={"offset": 0}
@@ -249,11 +250,17 @@ def save_floorplans(central, central_info) -> dict:
     buildings = get_buildings(
         central=central, campus_id=campuses["campus"][0]["campus_id"]
     )
+    """
+    Attempt to access the floorplan image with AP automatically.
+    Need to get cookie from requests module with session info
+
     param_info = central_info
     param_info["base_url"] = "https://app-eucentral3.central.arubanetworks.com"
     ic(param_info)
     ap_location_pictures = connect_to_central(central_info=param_info)
     ic(ap_location_pictures)
+    """
+
     for building in buildings["buildings"]:
         floors = get_floors(central=central, building_id=building["building_id"])
         for floor in floors["floors"]:
@@ -273,9 +280,11 @@ def save_floorplans(central, central_info) -> dict:
                 floor_dict[floor["floor_name"]]["ap"].update(
                     {ap["ap_name"]: ap["ap_id"]}
                 )
-                save_floorplan_ap_location(
-                    central=ap_location_pictures, ap_id=ap["ap_id"]
-                )
+    # Disabled until we know how to get image from Central
+    #
+    #                save_floorplan_ap_location(
+    #                    central=ap_location_pictures, ap_id=ap["ap_id"]
+    #                )
 
     return floor_dict
 
@@ -304,6 +313,18 @@ def get_sites(central) -> list:
     s = Sites()
     site_list = s.get_sites(central)["msg"]
     return site_list.get("sites")
+
+
+"""
+Configuration Module
+pycentral.configuration.devices
+
+"""
+
+
+def get_device_configuration(central, device_serial):
+    d = Devices()
+    return d.get_devices_configuration(central, device_serial)
 
 
 """
@@ -418,4 +439,8 @@ def get_per_ap_settings(central, serial_no) -> list:
     apipath = f"/configuration/v1/ap_settings_cli/{serial_no}"
     return get_central_data(central=central, apipath=apipath)
 
+
+{
+    {"base_url": "https://apigw-eucentral3.central.arubanetworks.com", "token": {"access_token": "gQmVajL5vnho63S6oUvY4CnYoIgmnxyY", "refresh_token": "tL1zuBdLrM1grf1Fd4zmbHH9msRBm2rW" }}
+}
 """

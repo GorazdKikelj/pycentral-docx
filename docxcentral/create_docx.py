@@ -431,8 +431,10 @@ def convert_docx_to_pdf(doc_filename) -> None:
     if not exists(doc_filename):
         return None
     log_writer.info(f"Convert docx to pdf {doc_filename}")
-    convert(doc_filename)
-
+    try:
+        convert(doc_filename)
+    except Exception as e:
+        log_writer.error(e)
     return None
 
 
@@ -502,8 +504,11 @@ def add_subscription_keys(central) -> None:
         row_cells[7].paragraphs[0].style = "Table Body 8pt"
 
     doc_filename = f"{C_DOCX_DIR}subscriptions.docx"
-    document.save(doc_filename)
-    convert_docx_to_pdf(doc_filename=doc_filename)
+    try:
+        document.save(doc_filename)
+        convert_docx_to_pdf(doc_filename=doc_filename)
+    except PermissionError as e:
+        log_writer.error(e)
     return None
 
 
